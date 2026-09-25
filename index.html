@@ -8,6 +8,8 @@
     <meta name="apple-mobile-web-app-title" content="Archive">
     <meta name="mobile-web-app-capable" content="yes">
     <title>Archive</title>
+    <!-- ✨ 2번 추가내용: 모바일 드래그 앤 드롭을 위한 SortableJS 라이브러리 추가 ✨ -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
     <style>
         * {
             box-sizing: border-box;
@@ -156,7 +158,7 @@
             color: var(--text-sub);
         }
 
-        /* ── 2페이지: 실모 기록부 (상단 수학 90px + 하단 영어 120px 완벽 적용) ── */
+        /* ── 2페이지: 실모 기록부 ── */
         .records-screen {
             flex: 1;
             overflow-y: auto;
@@ -258,13 +260,7 @@
             font-size: 12px;
         }
 
-        .round-label {
-            font-weight: 600;
-            color: var(--text-sub);
-            width: 32px;
-        }
-
-        /* ✨ 1번 추가내용: 회차 이름 입력창 스타일 ✨ */
+        /* ✨ 3번 추가내용: 이름이 길어도 안 잘리게 입력창 영역 확장 ✨ */
         .round-name-input {
             border: none;
             outline: none;
@@ -272,7 +268,9 @@
             font-size: 12px;
             font-weight: 600;
             color: var(--text-sub);
-            width: 50px;
+            flex: 1;           /* 빈 공간을 모두 채움 */
+            min-width: 60px;   /* 최소 너비 설정 */
+            margin-right: 8px; /* 우측 영역과의 간격 */
         }
 
         .misc-name-input {
@@ -281,13 +279,16 @@
             background: transparent;
             font-size: 12px;
             font-weight: 500;
-            max-width: 120px;
+            flex: 1;
+            min-width: 60px;
+            margin-right: 8px;
         }
 
         .round-right {
             display: flex;
             align-items: center;
             gap: 8px;
+            flex-shrink: 0; /* 점수/날짜/삭제 버튼 영역은 크기 축소 방지 */
         }
 
         .score-input {
@@ -394,7 +395,7 @@
             english: { series: [], misc: [] }
         };
 
-        // 데이터 영구 복원 (이전 버전 데이터가 있으면 자동 이전)
+        // 데이터 영구 복원
         let appData = null;
         try {
             const saved = localStorage.getItem(STORAGE_KEY) 
@@ -427,7 +428,7 @@
             else slider.classList.remove('show-records');
         }
 
-        // 로컬 기준 오늘 날짜 (YYYY-MM-DD)
+        // 로컬 기준 오늘 날짜
         function getTodayLocalYYYYMMDD() {
             const d = new Date();
             const y = d.getFullYear();
@@ -468,7 +469,6 @@
             }
         }, { passive: true });
 
-        // 키보드 방향키로도 즉각 전환 지원
         document.addEventListener('keydown', (e) => {
             if (e.target.tagName === 'INPUT') return;
             if (e.key === 'ArrowRight') goTo('records');
@@ -546,18 +546,16 @@
                 // 1. 시리즈 카드들
                 subData.series.forEach(s => {
                     const card = document.createElement('div');
-                    card.className = 'card';
+                    card.className = 'card series-card'; // ✨ 2번: 드래그 타겟 클래스 추가
                     card.innerHTML = `
                         <div class="card-header-row">
                             <input class="card-name-input" value="${s.name}" oninput="updateSeriesName('${sub.key}', '${s.id}', this.value)" />
                             <button class="btn-del" onclick="delSeries('${sub.key}', '${s.id}')">×</button>
                         </div>
-                        <div class="rounds-list">
+                        <div class="rounds-list" id="rounds-${s.id}"> <!-- ✨ 2번: 아이디 부여 -->
                             ${s.rounds.map(r => `
                                 <div class="round-row">
-                                    <!-- ✨ 2번 추가내용: 회차 이름 수정 가능하도록 변경 ✨ -->
                                     <input class="round-name-input" value="${r.name || r.round + '회'}" oninput="updateRoundName('${sub.key}', '${s.id}', ${r.round}, this.value)" />
-                                    
                                     <div class="round-right">
                                         <input class="score-input" type="number" placeholder="--" value="${r.score !== '' ? r.score : ''}" 
                                             oninput="handleRoundScoreInput('${sub.key}', '${s.id}', ${r.round}, this)" />
@@ -578,7 +576,7 @@
                     <div class="card-header-row">
                         <span style="font-size:13px; font-weight:700; color:var(--text-sub);">기타</span>
                     </div>
-                    <div class="rounds-list">
+                    <div class="rounds-list" id="misc-list-${sub.key}"> <!-- ✨ 2번: 아이디 부여 -->
                         ${subData.misc.length === 0 ? '<div style="font-size:11px; color:#c7c7cc; padding:10px 0; text-align:center;">기록 없음</div>' : ''}
                         ${subData.misc.map(m => `
                             <div class="round-row">
@@ -604,6 +602,71 @@
                 row.appendChild(addSeriesBtn);
 
                 container.appendChild(section);
+
+                // ✨ 2번: 드래그 앤 드롭 정렬 기능 바인딩 (DOM 렌더링 직후) ✨
+                // 3-1) 가로 시리즈 카드 순서 변경
+                Sortable.create(row, {
+                    animation: 150,
+                    delay: 200,             // 터치 시 0.2초간 꾹 눌러야 이동 (스크롤 간섭 방지)
+                    delayOnTouchOnly: true,
+                    draggable: '.series-card', // 기타 및 추가버튼은 드래그 제외
+                    filter: 'input, button', // 텍스트 입력창은 터치 가능하게 예외처리
+                    preventOnFilter: false,
+                    onEnd: function(evt) {
+                        const oldIdx = evt.oldDraggableIndex;
+                        const newIdx = evt.newDraggableIndex;
+                        if (oldIdx !== undefined && newIdx !== undefined && oldIdx !== newIdx) {
+                            const moved = appData[sub.key].series.splice(oldIdx, 1)[0];
+                            appData[sub.key].series.splice(newIdx, 0, moved);
+                            saveData();
+                        }
+                    }
+                });
+
+                // 3-2) 시리즈 내 회차 순서 변경
+                subData.series.forEach(s => {
+                    const roundsListEl = section.querySelector(`#rounds-${s.id}`);
+                    if (roundsListEl) {
+                        Sortable.create(roundsListEl, {
+                            animation: 150,
+                            delay: 200,
+                            delayOnTouchOnly: true,
+                            filter: 'input, button',
+                            preventOnFilter: false,
+                            onEnd: function(evt) {
+                                const oldIdx = evt.oldIndex;
+                                const newIdx = evt.newIndex;
+                                if (oldIdx !== undefined && newIdx !== undefined && oldIdx !== newIdx) {
+                                    const moved = s.rounds.splice(oldIdx, 1)[0];
+                                    s.rounds.splice(newIdx, 0, moved);
+                                    saveData();
+                                }
+                            }
+                        });
+                    }
+                });
+
+                // 3-3) 기타 실모 내 순서 변경
+                const miscListEl = section.querySelector(`#misc-list-${sub.key}`);
+                if (miscListEl) {
+                    Sortable.create(miscListEl, {
+                        animation: 150,
+                        delay: 200,
+                        delayOnTouchOnly: true,
+                        draggable: '.round-row', // '기록 없음' 텍스트 드래그 방지
+                        filter: 'input, button',
+                        preventOnFilter: false,
+                        onEnd: function(evt) {
+                            const oldIdx = evt.oldDraggableIndex;
+                            const newIdx = evt.newDraggableIndex;
+                            if (oldIdx !== undefined && newIdx !== undefined && oldIdx !== newIdx) {
+                                const moved = appData[sub.key].misc.splice(oldIdx, 1)[0];
+                                appData[sub.key].misc.splice(newIdx, 0, moved);
+                                saveData();
+                            }
+                        }
+                    });
+                }
             });
         }
 
@@ -633,8 +696,9 @@
         function addRoundToSeries(subKey, seriesId) {
             const series = appData[subKey].series.find(s => s.id === seriesId);
             if (!series) return;
-            const nextRoundNum = series.rounds.length + 1;
-            series.rounds.push({ round: nextRoundNum, score: '', date: '' });
+            // 고유 식별을 위해 round 번호를 Date.now()로 추가해도 되지만, 기존 로직 유지
+            const nextRoundNum = series.rounds.length > 0 ? Math.max(...series.rounds.map(r => r.round)) + 1 : 1;
+            series.rounds.push({ round: nextRoundNum, name: nextRoundNum + '회', score: '', date: '' });
             saveData();
             renderRecords();
         }
@@ -645,7 +709,6 @@
             saveData();
         }
 
-        /* ✨ 3번 추가내용: 회차 이름 저장 기능 ✨ */
         function updateRoundName(subKey, seriesId, roundNum, newName) {
             const series = appData[subKey].series.find(s => s.id === seriesId);
             if (!series) return;
@@ -680,7 +743,7 @@
             appData[subKey].series.push({
                 id: 's_' + Date.now(),
                 name: name,
-                rounds: Array.from({ length: total }, (_, i) => ({ round: i + 1, score: '', date: '' }))
+                rounds: Array.from({ length: total }, (_, i) => ({ round: i + 1, name: (i + 1) + '회', score: '', date: '' }))
             });
             saveData();
             renderRecords();
@@ -746,6 +809,9 @@
         }
 
         function delMisc(subKey, miscId) {
+            // ✨ 1번 추가내용: 기타 실모 삭제 시 확인 알림창 추가 ✨
+            if (!confirm('정말 삭제하시겠습니까?')) return;
+            
             appData[subKey].misc = appData[subKey].misc.filter(m => m.id !== miscId);
             saveData();
             renderRecords();
