@@ -21,7 +21,7 @@
             --text: #000000;
             --text-sub: #8e8e93;
             --text-muted: #c7c7cc;
-            /* 회파랑 계열 컬러 팔레트 */
+            /* 회파랑 계열 팔레트 */
             --math: #2c4c6f;
             --kor: #5a7d9a;
             --eng: #8fa8be;
@@ -36,44 +36,12 @@
             user-select: none;
         }
 
-        /* ── 상단 초미니멀 네비게이션 탭 ── */
-        .top-nav {
-            position: fixed;
-            top: 16px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 100;
-            display: flex;
-            background: #f2f2f7;
-            padding: 3px;
-            border-radius: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.04);
-        }
-
-        .nav-tab {
-            border: none;
-            background: transparent;
-            padding: 5px 14px;
-            border-radius: 16px;
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--text-sub);
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .nav-tab.active {
-            background: #ffffff;
-            color: var(--text);
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-
-        /* ── 좌우 슬라이더 (하드웨어 가속 60fps) ── */
+        /* ── 부드러운 하드웨어 가속 슬라이더 ── */
         .pages-slider {
             display: flex;
             width: 200vw;
             height: 100vh;
-            transition: transform 0.35s cubic-bezier(0.25, 1, 0.5, 1);
+            transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
             transform: translate3d(0, 0, 0);
             will-change: transform;
         }
@@ -122,7 +90,7 @@
         .cal-nav-btn {
             background: none;
             border: none;
-            font-size: 16px;
+            font-size: 15px;
             color: var(--text-sub);
             cursor: pointer;
             padding: 6px 10px;
@@ -184,7 +152,7 @@
         .records-screen {
             flex: 1;
             overflow-y: auto;
-            padding: 60px 32px 60px;
+            padding: 40px 32px 60px;
             display: flex;
             flex-direction: column;
             gap: 36px;
@@ -266,7 +234,7 @@
             display: flex;
             flex-direction: column;
             gap: 6px;
-            max-height: 240px;
+            max-height: 220px;
             overflow-y: auto;
         }
 
@@ -292,13 +260,13 @@
             background: transparent;
             font-size: 12px;
             font-weight: 500;
-            max-width: 110px;
+            max-width: 120px;
         }
 
         .round-right {
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
         }
 
         .score-input {
@@ -316,7 +284,7 @@
             font-size: 10px;
             color: var(--text-sub);
             cursor: pointer;
-            min-width: 28px;
+            min-width: 32px;
             text-align: right;
         }
 
@@ -330,9 +298,9 @@
             color: var(--text-sub);
             cursor: pointer;
             width: 100%;
-            margin-top: 2px;
+            margin-top: 4px;
         }
-        .btn-action-outline:hover { background: #f2f2f7; }
+        .btn-action-outline:hover { background: #f9f9fb; }
 
         .btn-add-series-card {
             min-width: 100px;
@@ -350,16 +318,10 @@
             font-weight: 600;
             flex-shrink: 0;
         }
-        .btn-add-series-card:hover { background: #f2f2f7; }
+        .btn-add-series-card:hover { background: #f9f9fb; }
     </style>
 </head>
 <body>
-
-    <!-- ── 상단 탭 ── -->
-    <div class="top-nav">
-        <button id="tabCal" class="nav-tab active" onclick="goTo('calendar')">달력</button>
-        <button id="tabRec" class="nav-tab" onclick="goTo('records')">기록부</button>
-    </div>
 
     <div class="pages-slider" id="pagesSlider">
 
@@ -403,7 +365,7 @@
     </div>
 
     <script>
-        const STORAGE_KEY = 'silmo_archive_master_db';
+        const STORAGE_KEY = 'silmo_archive_master_data';
 
         const EMPTY_DATA = {
             math: { series: [], misc: [] },
@@ -411,42 +373,56 @@
             english: { series: [], misc: [] }
         };
 
-        let appData = EMPTY_DATA;
+        // 데이터 영구 복원 (이전 버전 데이터가 있으면 자동 이전)
+        let appData = null;
         try {
-            const saved = localStorage.getItem(STORAGE_KEY);
+            const saved = localStorage.getItem(STORAGE_KEY) 
+                       || localStorage.getItem('my_silmo_archive_v4') 
+                       || localStorage.getItem('my_silmo_archive_v3')
+                       || localStorage.getItem('my_silmo_archive_v2');
             if (saved) appData = JSON.parse(saved);
         } catch (e) {
+            console.error('Data load error', e);
+        }
+
+        if (!appData) {
             appData = EMPTY_DATA;
         }
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
 
         const now = new Date();
         let curYear = now.getFullYear();
         let curMonth = now.getMonth();
 
+        // 실시간 영구 저장
         function saveData() {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
             renderCalendar();
         }
 
-        window.addEventListener('beforeunload', saveData);
-
         function goTo(view) {
             const slider = document.getElementById('pagesSlider');
-            const tabCal = document.getElementById('tabCal');
-            const tabRec = document.getElementById('tabRec');
-
-            if (view === 'records') {
-                slider.classList.add('show-records');
-                tabCal.classList.remove('active');
-                tabRec.classList.add('active');
-            } else {
-                slider.classList.remove('show-records');
-                tabRec.classList.remove('active');
-                tabCal.classList.add('active');
-            }
+            if (view === 'records') slider.classList.add('show-records');
+            else slider.classList.remove('show-records');
         }
 
-        // ── 스와이프 제어 (카드 내부 스크롤 보호) ──
+        // 로컬 기준 오늘 날짜 (YYYY-MM-DD)
+        function getTodayLocalYYYYMMDD() {
+            const d = new Date();
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        }
+
+        function formatDateDisplay(dStr) {
+            if (!dStr) return '';
+            const parts = dStr.split('-');
+            if (parts.length === 3) return `${parts[1]}.${parts[2]}`;
+            return dStr;
+        }
+
+        // ── 부드러운 스와이프 제어 ──
         let startX = 0, startY = 0;
         let isSwipeBlocked = false;
 
@@ -465,13 +441,20 @@
             const dx = e.changedTouches[0].clientX - startX;
             const dy = e.changedTouches[0].clientY - startY;
 
-            if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.3) {
+            if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.2) {
                 if (dx < 0) goTo('records');
                 else goTo('calendar');
             }
         }, { passive: true });
 
-        // ── 달력 함수 ──
+        // 키보드 방향키로도 즉각 전환 지원
+        document.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT') return;
+            if (e.key === 'ArrowRight') goTo('records');
+            if (e.key === 'ArrowLeft') goTo('calendar');
+        });
+
+        // ── 달력 ──
         function changeMonth(delta) {
             curMonth += delta;
             if (curMonth < 0) { curMonth = 11; curYear--; }
@@ -500,8 +483,8 @@
                 const dotsWrap = cell.querySelector('.dots-wrap');
 
                 ['math', 'korean', 'english'].forEach(sub => {
-                    const hasSeries = appData[sub].series.some(s => s.rounds.some(r => r.date === dateStr && r.score !== ''));
-                    const hasMisc = appData[sub].misc.some(m => m.date === dateStr && m.score !== '');
+                    const hasSeries = appData[sub].series.some(s => s.rounds.some(r => r.date === dateStr && r.score !== '' && r.score !== null));
+                    const hasMisc = appData[sub].misc.some(m => m.date === dateStr && m.score !== '' && m.score !== null);
                     if (hasSeries || hasMisc) {
                         const dot = document.createElement('span');
                         dot.className = `dot dot-${sub === 'math' ? 'math' : sub === 'korean' ? 'kor' : 'eng'}`;
@@ -519,21 +502,6 @@
             { key: 'korean', name: '국어', color: 'var(--kor)' },
             { key: 'english', name: '영어', color: 'var(--eng)' }
         ];
-
-        function getTodayYYYYMMDD() {
-            const d = new Date();
-            const year = d.getFullYear();
-            const month = String(d.getMonth() + 1).padStart(2, '0');
-            const day = String(d.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-        }
-
-        function formatDateDisplay(dStr) {
-            if (!dStr) return '';
-            const parts = dStr.split('-');
-            if (parts.length === 3) return `${parts[1]}.${parts[2]}`;
-            return dStr;
-        }
 
         function renderRecords() {
             const container = document.getElementById('recordsContainer');
@@ -554,7 +522,7 @@
 
                 const row = section.querySelector(`#row-${sub.key}`);
 
-                // 1. 시리즈 카드
+                // 1. 시리즈 카드들
                 subData.series.forEach(s => {
                     const card = document.createElement('div');
                     card.className = 'card';
@@ -568,10 +536,9 @@
                                 <div class="round-row">
                                     <span class="round-label">${r.round}회</span>
                                     <div class="round-right">
-                                        <input class="score-input" type="number" placeholder="--" value="${r.score}" 
-                                            oninput="handleRoundScoreInput(this, '${sub.key}', '${s.id}', ${r.round})" />
-                                        <span class="date-badge" id="date-${s.id}-${r.round}" onclick="editRoundDate('${sub.key}', '${s.id}', ${r.round})">${formatDateDisplay(r.date)}</span>
-                                        <button class="btn-del" onclick="delRound('${sub.key}', '${s.id}', ${r.round})">×</button>
+                                        <input class="score-input" type="number" placeholder="--" value="${r.score !== '' ? r.score : ''}" 
+                                            oninput="handleRoundScoreInput('${sub.key}', '${s.id}', ${r.round}, this)" />
+                                        <span class="date-badge" onclick="editRoundDate('${sub.key}', '${s.id}', ${r.round})">${formatDateDisplay(r.date)}</span>
                                     </div>
                                 </div>
                             `).join('')}
@@ -581,7 +548,7 @@
                     row.appendChild(card);
                 });
 
-                // 2. 기타 실모 카드
+                // 2. 기타(단발성) 실모 카드
                 const miscCard = document.createElement('div');
                 miscCard.className = 'card';
                 miscCard.innerHTML = `
@@ -594,9 +561,9 @@
                             <div class="round-row">
                                 <input class="misc-name-input" value="${m.name}" oninput="updateMiscName('${sub.key}', '${m.id}', this.value)" />
                                 <div class="round-right">
-                                    <input class="score-input" type="number" placeholder="--" value="${m.score}" 
-                                        oninput="handleMiscScoreInput(this, '${sub.key}', '${m.id}')" />
-                                    <span class="date-badge" id="date-misc-${m.id}" onclick="editMiscDate('${sub.key}', '${m.id}')">${formatDateDisplay(m.date)}</span>
+                                    <input class="score-input" type="number" placeholder="--" value="${m.score !== '' ? m.score : ''}" 
+                                        oninput="handleMiscScoreInput('${sub.key}', '${m.id}', this)" />
+                                    <span class="date-badge" onclick="editMiscDate('${sub.key}', '${m.id}')">${formatDateDisplay(m.date)}</span>
                                     <button class="btn-del" onclick="delMisc('${sub.key}', '${m.id}')">×</button>
                                 </div>
                             </div>
@@ -606,7 +573,7 @@
                 `;
                 row.appendChild(miscCard);
 
-                // 3. 시리즈 추가 버튼 카드
+                // 3. 새 시리즈 카드 추가 버튼
                 const addSeriesBtn = document.createElement('button');
                 addSeriesBtn.className = 'btn-add-series-card';
                 addSeriesBtn.innerHTML = `<span style="font-size:16px;">+</span><span>시리즈</span>`;
@@ -617,65 +584,143 @@
             });
         }
 
-        // ── 실시간 점수 입력 핸들러 (입력 즉시 저장 & 날짜 즉시 표시) ──
-        function handleRoundScoreInput(inputEl, subKey, seriesId, roundNum) {
+        // ── 시리즈 실시간 점수 & 날짜 처리 ──
+        function handleRoundScoreInput(subKey, seriesId, roundNum, inputEl) {
+            const val = inputEl.value.trim();
             const series = appData[subKey].series.find(s => s.id === seriesId);
             if (!series) return;
             const target = series.rounds.find(r => r.round === roundNum);
             if (!target) return;
 
-            const val = inputEl.value;
-            target.score = val === '' ? '' : Number(val);
+            const badgeEl = inputEl.nextElementSibling;
 
-            if (val !== '') {
-                if (!target.date) target.date = getTodayYYYYMMDD();
-            } else {
+            if (val === '') {
+                target.score = '';
                 target.date = '';
+                if (badgeEl) badgeEl.textContent = '';
+            } else {
+                target.score = Number(val);
+                if (!target.date) target.date = getTodayLocalYYYYMMDD();
+                if (badgeEl) badgeEl.textContent = formatDateDisplay(target.date);
             }
-
-            const dateBadge = document.getElementById(`date-${seriesId}-${roundNum}`);
-            if (dateBadge) dateBadge.innerText = formatDateDisplay(target.date);
 
             saveData();
-        }
-
-        function handleMiscScoreInput(inputEl, subKey, miscId) {
-            const target = appData[subKey].misc.find(m => m.id === miscId);
-            if (!target) return;
-
-            const val = inputEl.value;
-            target.score = val === '' ? '' : Number(val);
-
-            if (val !== '') {
-                if (!target.date) target.date = getTodayYYYYMMDD();
-            } else {
-                target.date = '';
-            }
-
-            const dateBadge = document.getElementById(`date-misc-${miscId}`);
-            if (dateBadge) dateBadge.innerText = formatDateDisplay(target.date);
-
-            saveData();
-        }
-
-        // ── 시리즈 관련 기능 ──
-        function updateSeriesName(subKey, seriesId, newName) {
-            const series = appData[subKey].series.find(s => s.id === seriesId);
-            if (series) {
-                series.name = newName;
-                saveData();
-            }
         }
 
         function addRoundToSeries(subKey, seriesId) {
             const series = appData[subKey].series.find(s => s.id === seriesId);
             if (!series) return;
-            const nextRound = series.rounds.length + 1;
-            series.rounds.push({ round: nextRound, score: '', date: '' });
+            const nextRoundNum = series.rounds.length + 1;
+            series.rounds.push({ round: nextRoundNum, score: '', date: '' });
             saveData();
             renderRecords();
         }
 
-        function delRound(subKey, seriesId, roundNum) {
+        function updateSeriesName(subKey, seriesId, newName) {
+            const series = appData[subKey].series.find(s => s.id === seriesId);
+            if (series) series.name = newName;
+            saveData();
+        }
+
+        function editRoundDate(subKey, seriesId, roundNum) {
             const series = appData[subKey].series.find(s => s.id === seriesId);
             if (!series) return;
+            const target = series.rounds.find(r => r.round === roundNum);
+            if (!target || target.score === '') return;
+
+            const newDate = prompt('날짜 (YYYY-MM-DD)', target.date || getTodayLocalYYYYMMDD());
+            if (newDate) {
+                target.date = newDate;
+                saveData();
+                renderRecords();
+            }
+        }
+
+        function addSeries(subKey) {
+            const name = prompt('시리즈 이름');
+            if (!name) return;
+            const countStr = prompt('총 회차 수');
+            const total = parseInt(countStr);
+            if (!total || total <= 0) return;
+
+            appData[subKey].series.push({
+                id: 's_' + Date.now(),
+                name: name,
+                rounds: Array.from({ length: total }, (_, i) => ({ round: i + 1, score: '', date: '' }))
+            });
+            saveData();
+            renderRecords();
+        }
+
+        function delSeries(subKey, seriesId) {
+            if (!confirm('삭제하시겠습니까?')) return;
+            appData[subKey].series = appData[subKey].series.filter(s => s.id !== seriesId);
+            saveData();
+            renderRecords();
+        }
+
+        // ── 기타 실모 실시간 점수 & 날짜 처리 ──
+        function handleMiscScoreInput(subKey, miscId, inputEl) {
+            const val = inputEl.value.trim();
+            const target = appData[subKey].misc.find(m => m.id === miscId);
+            if (!target) return;
+
+            const badgeEl = inputEl.nextElementSibling;
+
+            if (val === '') {
+                target.score = '';
+                target.date = '';
+                if (badgeEl) badgeEl.textContent = '';
+            } else {
+                target.score = Number(val);
+                if (!target.date) target.date = getTodayLocalYYYYMMDD();
+                if (badgeEl) badgeEl.textContent = formatDateDisplay(target.date);
+            }
+
+            saveData();
+        }
+
+        function addMiscItem(subKey) {
+            const name = prompt('실모 이름');
+            if (!name) return;
+
+            appData[subKey].misc.push({
+                id: 'm_' + Date.now(),
+                name: name,
+                score: '',
+                date: ''
+            });
+            saveData();
+            renderRecords();
+        }
+
+        function updateMiscName(subKey, miscId, newName) {
+            const target = appData[subKey].misc.find(m => m.id === miscId);
+            if (target) target.name = newName;
+            saveData();
+        }
+
+        function editMiscDate(subKey, miscId) {
+            const target = appData[subKey].misc.find(m => m.id === miscId);
+            if (!target || target.score === '') return;
+
+            const newDate = prompt('날짜 (YYYY-MM-DD)', target.date || getTodayLocalYYYYMMDD());
+            if (newDate) {
+                target.date = newDate;
+                saveData();
+                renderRecords();
+            }
+        }
+
+        function delMisc(subKey, miscId) {
+            appData[subKey].misc = appData[subKey].misc.filter(m => m.id !== miscId);
+            saveData();
+            renderRecords();
+        }
+
+        // 초기 실행
+        renderCalendar();
+        renderRecords();
+    </script>
+</body>
+</html>
