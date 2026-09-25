@@ -2,7 +2,6 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <!-- 1. 앱으로 만들기 위한 태그 추가 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -32,20 +31,24 @@
             --eng: #8fa8be;
         }
 
-        body {
+        /* 워터슬라이드(전체 화면 스크롤) 방지벽 */
+        html, body {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
             background-color: var(--bg);
             color: var(--text);
-            overflow: hidden;
-            width: 100vw;
-            height: 100vh;
             user-select: none;
+            -webkit-user-select: none;
         }
 
         /* ── 부드러운 하드웨어 가속 슬라이더 ── */
         .pages-slider {
             display: flex;
             width: 200vw;
-            height: 100vh;
+            height: 100%;
             transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
             transform: translate3d(0, 0, 0);
             will-change: transform;
@@ -57,7 +60,7 @@
 
         .page {
             width: 100vw;
-            height: 100vh;
+            height: 100%;
             display: flex;
             flex-direction: column;
             overflow: hidden;
@@ -153,16 +156,17 @@
             color: var(--text-sub);
         }
 
-        /* ── 2페이지: 실모 기록부 ── */
+        /* ── 2페이지: 실모 기록부 (상단 수학 90px + 하단 영어 180px 완벽 적용) ── */
         .records-screen {
             flex: 1;
             overflow-y: auto;
-            /* 2. 수학 텍스트 잘림 방지를 위해 상단 여백 40px -> 90px로 대폭 확장 */
-            padding: 90px 32px 60px;
+            padding: 90px 32px 180px; 
             display: flex;
             flex-direction: column;
             gap: 36px;
             -webkit-overflow-scrolling: touch;
+            overscroll-behavior-y: contain;
+            touch-action: pan-y;
         }
 
         .subject-group {
