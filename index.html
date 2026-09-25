@@ -2,7 +2,11 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <!-- 아이폰 홈화면 추가 시 사파리 주소창 없는 단독 앱으로 실행 -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Archive">
     <title>Archive</title>
     <style>
         * {
@@ -148,11 +152,11 @@
             color: var(--text-sub);
         }
 
-        /* ── 2페이지: 실모 기록부 (하단 여백 및 부드러운 세로 스크롤 강화) ── */
+        /* ── 2페이지: 실모 기록부 (상단 수학 잘림 방지 + 하단 여백) ── */
         .records-screen {
             flex: 1;
             overflow-y: auto;
-            padding: 40px 32px 180px; /* 하단 넉넉한 여백 확보 */
+            padding: max(72px, env(safe-area-inset-top, 72px)) 32px 180px; /* 상단 72px+안전영역 여백 확보 */
             display: flex;
             flex-direction: column;
             gap: 36px;
@@ -522,7 +526,7 @@
 
                 const row = section.querySelector(`#row-${sub.key}`);
 
-                // 1. 시리즈 카드
+                // 1. 시리즈 카드들
                 subData.series.forEach(s => {
                     const card = document.createElement('div');
                     card.className = 'card';
@@ -573,7 +577,7 @@
                 `;
                 row.appendChild(miscCard);
 
-                // 3. 시리즈 추가 버튼
+                // 3. 새 시리즈 카드 추가 버튼
                 const addSeriesBtn = document.createElement('button');
                 addSeriesBtn.className = 'btn-add-series-card';
                 addSeriesBtn.innerHTML = `<span style="font-size:16px;">+</span><span>시리즈</span>`;
@@ -661,64 +665,3 @@
 
         function handleMiscScoreInput(subKey, miscId, inputEl) {
             const val = inputEl.value.trim();
-            const target = appData[subKey].misc.find(m => m.id === miscId);
-            if (!target) return;
-
-            const badgeEl = inputEl.nextElementSibling;
-
-            if (val === '') {
-                target.score = '';
-                target.date = '';
-                if (badgeEl) badgeEl.textContent = '';
-            } else {
-                target.score = Number(val);
-                if (!target.date) target.date = getTodayLocalYYYYMMDD();
-                if (badgeEl) badgeEl.textContent = formatDateDisplay(target.date);
-            }
-
-            saveData();
-        }
-
-        function addMiscItem(subKey) {
-            const name = prompt('실모 이름');
-            if (!name) return;
-
-            appData[subKey].misc.push({
-                id: 'm_' + Date.now(),
-                name: name,
-                score: '',
-                date: ''
-            });
-            saveData();
-            renderRecords();
-        }
-
-        function updateMiscName(subKey, miscId, newName) {
-            const target = appData[subKey].misc.find(m => m.id === miscId);
-            if (target) target.name = newName;
-            saveData();
-        }
-
-        function editMiscDate(subKey, miscId) {
-            const target = appData[subKey].misc.find(m => m.id === miscId);
-            if (!target || target.score === '') return;
-
-            const newDate = prompt('날짜 (YYYY-MM-DD)', target.date || getTodayLocalYYYYMMDD());
-            if (newDate) {
-                target.date = newDate;
-                saveData();
-                renderRecords();
-            }
-        }
-
-        function delMisc(subKey, miscId) {
-            appData[subKey].misc = appData[subKey].misc.filter(m => m.id !== miscId);
-            saveData();
-            renderRecords();
-        }
-
-        renderCalendar();
-        renderRecords();
-    </script>
-</body>
-</html>
