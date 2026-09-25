@@ -2,11 +2,12 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
+    <!-- 1. 앱으로 만들기 위한 태그 추가 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <!-- 아이폰 홈화면 추가 시 사파리 주소창 없는 단독 앱으로 실행 -->
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Archive">
+    <meta name="mobile-web-app-capable" content="yes">
     <title>Archive</title>
     <style>
         * {
@@ -152,17 +153,16 @@
             color: var(--text-sub);
         }
 
-        /* ── 2페이지: 실모 기록부 (상단 수학 잘림 방지 + 하단 여백) ── */
+        /* ── 2페이지: 실모 기록부 ── */
         .records-screen {
             flex: 1;
             overflow-y: auto;
-            padding: max(72px, env(safe-area-inset-top, 72px)) 32px 180px; /* 상단 72px+안전영역 여백 확보 */
+            /* 2. 수학 텍스트 잘림 방지를 위해 상단 여백 40px -> 90px로 대폭 확장 */
+            padding: 90px 32px 60px;
             display: flex;
             flex-direction: column;
             gap: 36px;
             -webkit-overflow-scrolling: touch;
-            overscroll-behavior-y: contain;
-            touch-action: pan-y;
         }
 
         .subject-group {
@@ -185,7 +185,6 @@
             border-radius: 50%;
         }
 
-        /* 가로 스크롤 카드 행 */
         .horizontal-cards {
             display: flex;
             gap: 14px;
@@ -380,7 +379,7 @@
             english: { series: [], misc: [] }
         };
 
-        // 데이터 영구 복원
+        // 데이터 영구 복원 (이전 버전 데이터가 있으면 자동 이전)
         let appData = null;
         try {
             const saved = localStorage.getItem(STORAGE_KEY) 
@@ -401,6 +400,7 @@
         let curYear = now.getFullYear();
         let curMonth = now.getMonth();
 
+        // 실시간 영구 저장
         function saveData() {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
             renderCalendar();
@@ -412,6 +412,7 @@
             else slider.classList.remove('show-records');
         }
 
+        // 로컬 기준 오늘 날짜 (YYYY-MM-DD)
         function getTodayLocalYYYYMMDD() {
             const d = new Date();
             const y = d.getFullYear();
@@ -452,6 +453,7 @@
             }
         }, { passive: true });
 
+        // 키보드 방향키로도 즉각 전환 지원
         document.addEventListener('keydown', (e) => {
             if (e.target.tagName === 'INPUT') return;
             if (e.key === 'ArrowRight') goTo('records');
@@ -665,3 +667,64 @@
 
         function handleMiscScoreInput(subKey, miscId, inputEl) {
             const val = inputEl.value.trim();
+            const target = appData[subKey].misc.find(m => m.id === miscId);
+            if (!target) return;
+
+            const badgeEl = inputEl.nextElementSibling;
+
+            if (val === '') {
+                target.score = '';
+                target.date = '';
+                if (badgeEl) badgeEl.textContent = '';
+            } else {
+                target.score = Number(val);
+                if (!target.date) target.date = getTodayLocalYYYYMMDD();
+                if (badgeEl) badgeEl.textContent = formatDateDisplay(target.date);
+            }
+
+            saveData();
+        }
+
+        function addMiscItem(subKey) {
+            const name = prompt('실모 이름');
+            if (!name) return;
+
+            appData[subKey].misc.push({
+                id: 'm_' + Date.now(),
+                name: name,
+                score: '',
+                date: ''
+            });
+            saveData();
+            renderRecords();
+        }
+
+        function updateMiscName(subKey, miscId, newName) {
+            const target = appData[subKey].misc.find(m => m.id === miscId);
+            if (target) target.name = newName;
+            saveData();
+        }
+
+        function editMiscDate(subKey, miscId) {
+            const target = appData[subKey].misc.find(m => m.id === miscId);
+            if (!target || target.score === '') return;
+
+            const newDate = prompt('날짜 (YYYY-MM-DD)', target.date || getTodayLocalYYYYMMDD());
+            if (newDate) {
+                target.date = newDate;
+                saveData();
+                renderRecords();
+            }
+        }
+
+        function delMisc(subKey, miscId) {
+            appData[subKey].misc = appData[subKey].misc.filter(m => m.id !== miscId);
+            saveData();
+            renderRecords();
+        }
+
+        renderCalendar();
+        renderRecords();
+    </script>
+</body>
+</html>
