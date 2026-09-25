@@ -8,7 +8,7 @@
     <meta name="apple-mobile-web-app-title" content="Archive">
     <meta name="mobile-web-app-capable" content="yes">
     <title>Archive</title>
-    <!-- ✨ 2번 추가내용: 모바일 드래그 앤 드롭을 위한 SortableJS 라이브러리 추가 ✨ -->
+    <!-- 모바일 드래그 앤 드롭을 위한 SortableJS 라이브러리 추가 -->
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
     <style>
         * {
@@ -213,6 +213,7 @@
             flex-direction: column;
             gap: 12px;
             flex-shrink: 0;
+            /* 높이가 컨텐츠에 맞춰서 유동적으로 늘어나도록 설정됨 (별도 설정 필요 없음) */
         }
 
         .card-header-row {
@@ -246,8 +247,7 @@
             display: flex;
             flex-direction: column;
             gap: 6px;
-            max-height: 220px;
-            overflow-y: auto;
+            /* ✨ 수정 1: 높이 제한(max-height)과 내부 스크롤(overflow-y)을 삭제하여 한 번에 다 보이게 함 */
         }
 
         .round-row {
@@ -260,7 +260,6 @@
             font-size: 12px;
         }
 
-        /* ✨ 3번 추가내용: 이름이 길어도 안 잘리게 입력창 영역 확장 ✨ */
         .round-name-input {
             border: none;
             outline: none;
@@ -526,6 +525,17 @@
 
         function renderRecords() {
             const container = document.getElementById('recordsContainer');
+            const recordsScreen = document.querySelector('.records-screen');
+
+            // ✨ 수정 2: 렌더링하기(DOM 초기화) 전에 현재 좌우/상하 스크롤 위치를 기억해 둠 ✨
+            const scrollY = recordsScreen ? recordsScreen.scrollTop : 0;
+            const scrollXMap = {};
+            SUBJECTS.forEach(sub => {
+                const row = document.getElementById(`row-${sub.key}`);
+                if (row) scrollXMap[sub.key] = row.scrollLeft;
+            });
+
+            // 화면 비우기
             container.innerHTML = '';
 
             SUBJECTS.forEach(sub => {
@@ -546,13 +556,13 @@
                 // 1. 시리즈 카드들
                 subData.series.forEach(s => {
                     const card = document.createElement('div');
-                    card.className = 'card series-card'; // ✨ 2번: 드래그 타겟 클래스 추가
+                    card.className = 'card series-card';
                     card.innerHTML = `
                         <div class="card-header-row">
                             <input class="card-name-input" value="${s.name}" oninput="updateSeriesName('${sub.key}', '${s.id}', this.value)" />
                             <button class="btn-del" onclick="delSeries('${sub.key}', '${s.id}')">×</button>
                         </div>
-                        <div class="rounds-list" id="rounds-${s.id}"> <!-- ✨ 2번: 아이디 부여 -->
+                        <div class="rounds-list" id="rounds-${s.id}">
                             ${s.rounds.map(r => `
                                 <div class="round-row">
                                     <input class="round-name-input" value="${r.name || r.round + '회'}" oninput="updateRoundName('${sub.key}', '${s.id}', ${r.round}, this.value)" />
@@ -576,7 +586,7 @@
                     <div class="card-header-row">
                         <span style="font-size:13px; font-weight:700; color:var(--text-sub);">기타</span>
                     </div>
-                    <div class="rounds-list" id="misc-list-${sub.key}"> <!-- ✨ 2번: 아이디 부여 -->
+                    <div class="rounds-list" id="misc-list-${sub.key}">
                         ${subData.misc.length === 0 ? '<div style="font-size:11px; color:#c7c7cc; padding:10px 0; text-align:center;">기록 없음</div>' : ''}
                         ${subData.misc.map(m => `
                             <div class="round-row">
@@ -603,14 +613,13 @@
 
                 container.appendChild(section);
 
-                // ✨ 2번: 드래그 앤 드롭 정렬 기능 바인딩 (DOM 렌더링 직후) ✨
-                // 3-1) 가로 시리즈 카드 순서 변경
+                // 드래그 앤 드롭 정렬 기능 바인딩 (DOM 렌더링 직후)
                 Sortable.create(row, {
                     animation: 150,
-                    delay: 200,             // 터치 시 0.2초간 꾹 눌러야 이동 (스크롤 간섭 방지)
+                    delay: 200,             
                     delayOnTouchOnly: true,
-                    draggable: '.series-card', // 기타 및 추가버튼은 드래그 제외
-                    filter: 'input, button', // 텍스트 입력창은 터치 가능하게 예외처리
+                    draggable: '.series-card', 
+                    filter: 'input, button', 
                     preventOnFilter: false,
                     onEnd: function(evt) {
                         const oldIdx = evt.oldDraggableIndex;
@@ -623,7 +632,6 @@
                     }
                 });
 
-                // 3-2) 시리즈 내 회차 순서 변경
                 subData.series.forEach(s => {
                     const roundsListEl = section.querySelector(`#rounds-${s.id}`);
                     if (roundsListEl) {
@@ -646,14 +654,13 @@
                     }
                 });
 
-                // 3-3) 기타 실모 내 순서 변경
                 const miscListEl = section.querySelector(`#misc-list-${sub.key}`);
                 if (miscListEl) {
                     Sortable.create(miscListEl, {
                         animation: 150,
                         delay: 200,
                         delayOnTouchOnly: true,
-                        draggable: '.round-row', // '기록 없음' 텍스트 드래그 방지
+                        draggable: '.round-row', 
                         filter: 'input, button',
                         preventOnFilter: false,
                         onEnd: function(evt) {
@@ -666,6 +673,15 @@
                             }
                         }
                     });
+                }
+            }); // forEach 끝
+
+            // ✨ 수정 2 계속: 렌더링이 완료된 직후, 기억해 둔 스크롤 위치를 원래대로 되돌려 놓음 ✨
+            if (recordsScreen) recordsScreen.scrollTop = scrollY;
+            SUBJECTS.forEach(sub => {
+                const row = document.getElementById(`row-${sub.key}`);
+                if (row && scrollXMap[sub.key] !== undefined) {
+                    row.scrollLeft = scrollXMap[sub.key];
                 }
             });
         }
@@ -696,7 +712,6 @@
         function addRoundToSeries(subKey, seriesId) {
             const series = appData[subKey].series.find(s => s.id === seriesId);
             if (!series) return;
-            // 고유 식별을 위해 round 번호를 Date.now()로 추가해도 되지만, 기존 로직 유지
             const nextRoundNum = series.rounds.length > 0 ? Math.max(...series.rounds.map(r => r.round)) + 1 : 1;
             series.rounds.push({ round: nextRoundNum, name: nextRoundNum + '회', score: '', date: '' });
             saveData();
@@ -809,7 +824,6 @@
         }
 
         function delMisc(subKey, miscId) {
-            // ✨ 1번 추가내용: 기타 실모 삭제 시 확인 알림창 추가 ✨
             if (!confirm('정말 삭제하시겠습니까?')) return;
             
             appData[subKey].misc = appData[subKey].misc.filter(m => m.id !== miscId);
