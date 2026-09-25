@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Exam Archive</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :root {
+            --bg-page: #f9f9fb;
+            --bg-card: #ffffff;
+            --border: #e5e5ea;
+            --text-main: #1c1c1e;
+            --text-sub: #8e8e93;
+            --math-color: #3b82f6;   /* 파랑 */
+            --kor-color: #f59e0b;    /* 주황 */
+            --eng-color: #10b981;    /* 초록 */
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-page);
+            color: var(--text-main);
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* ── 좌우 2페이지 슬라이더 ── */
+        .pages-slider {
+            display: flex;
+            width: 200vw;
+            height: 100vh;
+            transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+            transform: translateX(0); /* 기본: 달력(왼쪽) */
+        }
+
+        .pages-slider.show-records {
+            transform: translateX(-100vw); /* 기록부(오른쪽) */
+        }
+
+        .page {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* ── 공통 헤더 ── */
+        header {
+            height: 56px;
+            padding: 0 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-card);
+            flex-shrink: 0;
+        }
+
+        .logo {
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            color: var(--text-sub);
+        }
+
+        .nav-btn {
+            background: #f2f2f7;
+            border: 1px solid var(--border);
+            padding: 7px 14px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            color: var(--text-main);
+        }
+
+        /* ── 1페이지: 달력 ── */
+        .calendar-wrapper {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .calendar-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 420px;
+            padding: 24px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+        }
+
+        .calendar-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .month-title {
+            font-size: 16px;
+            font-weight: 700;
+            font-family: monospace;
+        }
+
+        .cal-btn {
+            background: none;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            padding: 4px 8px;
+            color: var(--text-sub);
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 6px;
+            text-align: center;
+        }
+
+        .cal-header {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-sub);
+            margin-bottom: 8px;
+        }
+
+        .cal-cell {
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 4px 2px;
+            border-radius: 8px;
+            background: #fafafa;
+            border: 1px solid #f0f0f0;
+            font-size: 12px;
+            font-family: monospace;
+        }
+
+        .dots-row {
+            display: flex;
+            gap: 2px;
+            min-height: 5px;
+            align-items: center;
+        }
+
+        .dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+        }
+        .dot-math { background-color: var(--math-color); }
+        .dot-kor { background-color: var(--kor-color); }
+        .dot-eng { background-color: var(--eng-color); }
+
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+            font-size: 12px;
+            color: var(--text-sub);
+        }
+
+        /* ── 2페이지: 실모 기록부 ── */
+        .records-scroll-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 30px 40px 60px;
+            display: flex;
+            flex-direction: column;
+            gap: 36px;
+        }
+
+        .subject-section {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .subject-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 15px;
+            font-weight: 700;
+        }
+
+        .subject-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        /* 가로 스크롤 컨테이너 */
+        .horizontal-row {
+            display: flex;
+            gap: 16px;
+            overflow-x: auto;
+            padding-bottom: 12px;
+            scrollbar-width: thin;
+        }
+
+        .exam-card {
+            min-width: 280px;
+            max-width: 280px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+
+        .exam-card-title {
+            font-size: 14px;
+            font-weight: 700;
+            border: none;
+            outline: none;
+            width: 100%;
+            background: transparent;
+            color: var(--text-main);
+            border-bottom: 1px solid transparent;
+        }
+        .exam-card-title:focus { border-bottom-color: var(--border); }
+
+        /* 회차 격자 */
+        .rounds-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+
+        .round-box {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 10px;
+            background: #f9f9fb;
+            border: 1px solid #eeeeee;
+            border-radius: 8px;
+            font-size: 12px;
+        }
+
+        .round-num {
+            font-family: monospace;
+            color: var(--text-sub);
+        }
+
+        .round-score-input {
+            width: 40px;
+            text-align: right;
+            border: none;
+            background: transparent;
+            font-family: monospace;
+            font-size: 13px;
+            font-weight: 600;
+            outline: none;
+        }
+
+        /* 단발성(기타) 실모 리스트 */
+        .misc-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: 180px;
+            overflow-y: auto;
+        }
+
+        .misc-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 10px;
+            background: #f9f9fb;
+            border-radius: 8px;
+            font-size: 12px;
+        }
+
+        .btn-add-item {
+            background: #f2f2f7;
+            border: 1px dashed var(--border);
+            padding: 8px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            color: var(--text-sub);
+            width: 100%;
+            margin-top: 4px;
+        }
+
+        .btn-add-series-card {
+            min-width: 120px;
+            border: 1px dashed var(--border);
+            border-radius: 14px;
+            background: transparent;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            color: var(--text-sub);
+            font-size: 12px;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+        .btn-add-series-card:hover { background: #f2f2f7; }
+    </style>
+</head>
+<body>
+
+    <div class="pages-slider" id="pagesSlider">
+
+        <!-- ── [화면 1: 랜딩 달력] 점수 위장용 ── -->
+        <div class="page">
+            <header>
+                <div class="logo">ARCHIVE</div>
+                <button class="nav-btn" onclick="goTo('records')">기록부 →</button>
+            </header>
+
+            <div class="calendar-wrapper">
+                <div class="calendar-card">
+                    <div class="calendar-nav">
+                        <button class="cal-btn" onclick="changeMonth(-1)">&lt;</button>
+                        <div class="month-title" id="monthTitle">2026. 09</div>
+                        <button class="cal-btn" onclick="changeMonth(1)">&gt;</button>
+                    </div>
+
+                    <div class="calendar-grid">
+                        <div class="cal-header">일</div>
+                        <div class="cal-header">월</div>
+                        <div class="cal-header">화</div>
+                        <div class="cal-header">수</div>
+                        <div class="cal-header">목</div>
+                        <div class="cal-header">금</div>
+                        <div class="cal-header">토</div>
+                    </div>
+                    <div class="calendar-grid" id="calendarDays"></div>
+
+                    <div class="legend">
+                        <span><span class="dot dot-math" style="display:inline-block; margin-right:4px;"></span>수학</span>
+                        <span><span class="dot dot-kor" style="display:inline-block; margin-right:4px;"></span>국어</span>
+                        <span><span class="dot dot-eng" style="display:inline-block; margin-right:4px;"></span>영어</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── [화면 2: 실모 상세 기록부] ── -->
+        <div class="page">
+            <header>
+                <button class="nav-btn" onclick="goTo('calendar')">← 달력</button>
+                <div class="logo">SCORE BOARD</div>
+                <div style="width: 60px;"></div>
+            </header>
+
+            <div class="records-scroll-container" id="recordsContainer">
+                <!-- JS로 수학, 국어, 영어 렌더링 -->
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // 초기 데이터 구조
+        const DEFAULT_DATA = {
+            math: {
+                series: [{ id: 's_m1', name: '킬링캠프 시즌1', rounds: [{ round: 1, score: 92, date: '2026-09-10' }, { round: 2, score: '', date: '' }, { round: 3, score: '', date: '' }, { round: 4, score: '', date: '' }] }],
+                misc: [{ id: 'm_m1', name: '시대 서바 1회', score: 96, date: '2026-09-12' }]
+            },
+            korean: {
+                series: [{ id: 's_k1', name: '이감 시즌5', rounds: [{ round: 1, score: 88, date: '2026-09-11' }, { round: 2, score: '', date: '' }] }],
+                misc: []
+            },
+            english: {
+                series: [],
+                misc: []
+            }
+        };
+
+        let appData = JSON.parse(localStorage.getItem('mock_archive_data')) || DEFAULT_DATA;
+        let curYear = new Date().getFullYear();
+        let curMonth = new Date().getMonth(); // 0~11
+
+        function saveData() {
+            localStorage.setItem('mock_archive_data', JSON.stringify(appData));
+            renderCalendar();
+        }
+
+        function goTo(view) {
+            const slider = document.getElementById('pagesSlider');
+            if (view === 'records') slider.classList.add('show-records');
+            else slider.classList.remove('show-records');
+        }
+
+        // 오늘 날짜 YYYY-MM-DD
+        function getTodayStr() {
+            return new Date().toISOString().split('T')[0];
+        }
+
+        // ── 캘린더 렌더링 ──
+        function changeMonth(delta) {
+            curMonth += delta;
+            if (curMonth < 0) { curMonth = 11; curYear--; }
+            else if (curMonth > 11) { curMonth = 0; curYear++; }
+            renderCalendar();
+        }
+
+        function renderCalendar() {
+            document.getElementById('monthTitle').innerText = `${curYear}. ${String(curMonth + 1).padStart(2, '0')}`;
+            const grid = document.getElementById('calendarDays');
+            grid.innerHTML = '';
+
+            const firstDay = new Date(curYear, curMonth, 1).getDay();
+            const totalDays = new Date(curYear, curMonth + 1, 0).getDate();
+
+            for (let i = 0; i < firstDay; i++) {
+                const empty = document.createElement('div');
+                grid.appendChild(empty);
+            }
+
+            for (let day = 1; day <= totalDays; day++) {
+                const dateStr = `${curYear}-${String(curMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                
+                const cell = document.createElement('div');
+                cell.className = 'cal-cell';
+                cell.innerHTML = `<span>${day}</span><div class="dots-row"></div>`;
+
+                const dotsRow = cell.querySelector('.dots-row');
+
+                // 과목별 응시 여부 체크 (점 찍기)
+                ['math', 'korean', 'english'].forEach(sub => {
+                    const hasSeries = appData[sub].series.some(s => s.rounds.some(r => r.date === dateStr && r.score !== ''));
+                    const hasMisc = appData[sub].misc.some(m => m.date === dateStr && m.score !== '');
+                    if (hasSeries || hasMisc) {
+                        const dot = document.createElement('span');
+                        dot.className = `dot dot-${sub === 'math' ? 'math' : sub === 'korean' ? 'kor' : 'eng'}`;
+                        dotsRow.appendChild(dot);
+                    }
+                });
+
+                grid.appendChild(cell);
+            }
+        }
+
+        // ── 기록부 렌더링 ──
+        const SUBJECTS = [
+            { key: 'math', name: '수학', color: 'var(--math-color)' },
+            { key: 'korean', name: '국어', color: 'var(--kor-color)' },
+            { key: 'english', name: '영어', color: 'var(--eng-color)' }
+        ];
+
+        function renderRecords() {
+            const container = document.getElementById('recordsContainer');
+            container.innerHTML = '';
+
+            SUBJECTS.forEach(sub => {
+                const subData = appData[sub.key];
+                const section = document.createElement('div');
+                section.className = 'subject-section';
+
+                section.innerHTML = `
+                    <div class="subject-header">
+                        <span class="subject-indicator" style="background:${sub.color}"></span>
+                        <span>${sub.name}</span>
+                    </div>
+                    <div class="horizontal-row" id="row-${sub.key}"></div>
+                `;
+
+                const row = section.querySelector(`#row-${sub.key}`);
+
+                // 1. 대표 시리즈 카드들
+                subData.series.forEach(s => {
+                    const card = document.createElement('div');
+                    card.className = 'exam-card';
+                    card.innerHTML = `
+                        <input class="exam-card-title" value="${s.name}" onchange="updateSeriesName('${sub.key}', '${s.id}', this.value)" />
+                        <div class="rounds-grid">
+                            ${s.rounds.map(r => `
+                                <div class="round-box">
+                                    <span class="round-num">${r.round}회</span>
+                                    <input class="round-score-input" type="number" placeholder="--" value="${r.score}" 
+                                        onchange="updateRoundScore('${sub.key}', '${s.id}', ${r.round}, this.value)" />
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                    row.appendChild(card);
+                });
+
+                // 2. 기타(단발성) 실모 카드
+                const miscCard = document.createElement('div');
+                miscCard.className = 'exam-card';
+                miscCard.innerHTML = `
+                    <div class="exam-card-title" style="color:var(--text-sub)">기타 / 단발 실모</div>
+                    <div class="misc-list">
+                        ${subData.misc.length === 0 ? '<div style="font-size:11px; color:#aaa; padding:10px 0;">기록 없음</div>' : ''}
+                        ${subData.misc.map(m => `
+                            <div class="misc-item">
+                                <span style="font-weight:500;">${m.name}</span>
+                                <span style="font-family:monospace; font-weight:700;">${m.score}점</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <button class="btn-add-item" onclick="addMiscItem('${sub.key}')">+ 회차 추가</button>
+                `;
+                row.appendChild(miscCard);
+
+                // 3. 새 시리즈 추가 버튼
+                const addSeriesBtn = document.createElement('button');
+                addSeriesBtn.className = 'btn-add-series-card';
+                addSeriesBtn.innerHTML = `<span style="font-size:18px;">+</span><span>시리즈 추가</span>`;
+                addSeriesBtn.onclick = () => addSeries(sub.key);
+                row.appendChild(addSeriesBtn);
+
+                container.appendChild(section);
+            });
+        }
+
+        // ── 데이터 변경 함수들 ──
+        function updateSeriesName(subKey, seriesId, newName) {
+            const series = appData[subKey].series.find(s => s.id === seriesId);
+            if (series) series.name = newName;
+            saveData();
+        }
+
+        function updateRoundScore(subKey, seriesId, roundNum, val) {
+            const series = appData[subKey].series.find(s => s.id === seriesId);
+            if (series) {
+                const targetRound = series.rounds.find(r => r.round === roundNum);
+                if (targetRound) {
+                    targetRound.score = val === '' ? '' : Number(val);
+                    targetRound.date = val === '' ? '' : getTodayStr();
+                }
+            }
+            saveData();
+        }
+
+        function addSeries(subKey) {
+            const name = prompt('실모 이름을 입력하세요 (예: 킬링캠프 시즌2)');
+            if (!name) return;
+            const roundsStr = prompt('총 회차 수를 입력하세요 (예: 6)', '6');
+            const total = parseInt(roundsStr || '6');
+
+            appData[subKey].series.push({
+                id: 's_' + Date.now(),
+                name: name,
+                rounds: Array.from({ length: total }, (_, i) => ({ round: i + 1, score: '', date: '' }))
+            });
+            saveData();
+            renderRecords();
+        }
+
+        function addMiscItem(subKey) {
+            const name = prompt('실모 이름을 입력하세요 (예: 강대K 1회)');
+            if (!name) return;
+            const scoreStr = prompt('점수를 입력하세요');
+            if (!scoreStr) return;
+
+            appData[subKey].misc.push({
+                id: 'm_' + Date.now(),
+                name: name,
+                score: Number(scoreStr),
+                date: getTodayStr()
+            });
+            saveData();
+            renderRecords();
+        }
+
+        // 초기 실행
+        renderCalendar();
+        renderRecords();
+    </script>
+</body>
+</html>
