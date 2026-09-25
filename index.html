@@ -264,6 +264,17 @@
             width: 32px;
         }
 
+        /* ✨ 1번 추가내용: 회차 이름 입력창 스타일 ✨ */
+        .round-name-input {
+            border: none;
+            outline: none;
+            background: transparent;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-sub);
+            width: 50px;
+        }
+
         .misc-name-input {
             border: none;
             outline: none;
@@ -544,7 +555,9 @@
                         <div class="rounds-list">
                             ${s.rounds.map(r => `
                                 <div class="round-row">
-                                    <span class="round-label">${r.round}회</span>
+                                    <!-- ✨ 2번 추가내용: 회차 이름 수정 가능하도록 변경 ✨ -->
+                                    <input class="round-name-input" value="${r.name || r.round + '회'}" oninput="updateRoundName('${sub.key}', '${s.id}', ${r.round}, this.value)" />
+                                    
                                     <div class="round-right">
                                         <input class="score-input" type="number" placeholder="--" value="${r.score !== '' ? r.score : ''}" 
                                             oninput="handleRoundScoreInput('${sub.key}', '${s.id}', ${r.round}, this)" />
@@ -630,6 +643,17 @@
             const series = appData[subKey].series.find(s => s.id === seriesId);
             if (series) series.name = newName;
             saveData();
+        }
+
+        /* ✨ 3번 추가내용: 회차 이름 저장 기능 ✨ */
+        function updateRoundName(subKey, seriesId, roundNum, newName) {
+            const series = appData[subKey].series.find(s => s.id === seriesId);
+            if (!series) return;
+            const target = series.rounds.find(r => r.round === roundNum);
+            if (target) {
+                target.name = newName;
+                saveData(); 
+            }
         }
 
         function editRoundDate(subKey, seriesId, roundNum) {
