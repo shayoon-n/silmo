@@ -148,15 +148,17 @@
             color: var(--text-sub);
         }
 
-        /* ── 2페이지: 실모 기록부 ── */
+        /* ── 2페이지: 실모 기록부 (하단 여백 및 부드러운 세로 스크롤 강화) ── */
         .records-screen {
             flex: 1;
             overflow-y: auto;
-            padding: 40px 32px 60px;
+            padding: 40px 32px 180px; /* 하단 넉넉한 여백 확보 */
             display: flex;
             flex-direction: column;
             gap: 36px;
             -webkit-overflow-scrolling: touch;
+            overscroll-behavior-y: contain;
+            touch-action: pan-y;
         }
 
         .subject-group {
@@ -179,6 +181,7 @@
             border-radius: 50%;
         }
 
+        /* 가로 스크롤 카드 행 */
         .horizontal-cards {
             display: flex;
             gap: 14px;
@@ -373,7 +376,7 @@
             english: { series: [], misc: [] }
         };
 
-        // 데이터 영구 복원 (이전 버전 데이터가 있으면 자동 이전)
+        // 데이터 영구 복원
         let appData = null;
         try {
             const saved = localStorage.getItem(STORAGE_KEY) 
@@ -394,7 +397,6 @@
         let curYear = now.getFullYear();
         let curMonth = now.getMonth();
 
-        // 실시간 영구 저장
         function saveData() {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
             renderCalendar();
@@ -406,7 +408,6 @@
             else slider.classList.remove('show-records');
         }
 
-        // 로컬 기준 오늘 날짜 (YYYY-MM-DD)
         function getTodayLocalYYYYMMDD() {
             const d = new Date();
             const y = d.getFullYear();
@@ -447,7 +448,6 @@
             }
         }, { passive: true });
 
-        // 키보드 방향키로도 즉각 전환 지원
         document.addEventListener('keydown', (e) => {
             if (e.target.tagName === 'INPUT') return;
             if (e.key === 'ArrowRight') goTo('records');
@@ -522,7 +522,7 @@
 
                 const row = section.querySelector(`#row-${sub.key}`);
 
-                // 1. 시리즈 카드들
+                // 1. 시리즈 카드
                 subData.series.forEach(s => {
                     const card = document.createElement('div');
                     card.className = 'card';
@@ -573,7 +573,7 @@
                 `;
                 row.appendChild(miscCard);
 
-                // 3. 새 시리즈 카드 추가 버튼
+                // 3. 시리즈 추가 버튼
                 const addSeriesBtn = document.createElement('button');
                 addSeriesBtn.className = 'btn-add-series-card';
                 addSeriesBtn.innerHTML = `<span style="font-size:16px;">+</span><span>시리즈</span>`;
@@ -584,7 +584,7 @@
             });
         }
 
-        // ── 시리즈 실시간 점수 & 날짜 처리 ──
+        // ── 실시간 입력 핸들러 ──
         function handleRoundScoreInput(subKey, seriesId, roundNum, inputEl) {
             const val = inputEl.value.trim();
             const series = appData[subKey].series.find(s => s.id === seriesId);
@@ -659,7 +659,6 @@
             renderRecords();
         }
 
-        // ── 기타 실모 실시간 점수 & 날짜 처리 ──
         function handleMiscScoreInput(subKey, miscId, inputEl) {
             const val = inputEl.value.trim();
             const target = appData[subKey].misc.find(m => m.id === miscId);
@@ -718,7 +717,6 @@
             renderRecords();
         }
 
-        // 초기 실행
         renderCalendar();
         renderRecords();
     </script>
