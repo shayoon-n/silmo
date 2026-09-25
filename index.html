@@ -198,7 +198,7 @@
             padding-bottom: 8px;
             scrollbar-width: none;
             -webkit-overflow-scrolling: touch;
-            touch-action: pan-x;
+            touch-action: pan-x pan-y;
         }
         .horizontal-cards::-webkit-scrollbar { display: none; }
 
@@ -766,7 +766,7 @@
         }
 
         function delRound(subKey, seriesId, roundNum) {
-            if (!confirm('이 회차를 삭제하시겠습니까?')) return;
+            if (!confirm('삭제하시겠습니까?')) return;
             const series = appData[subKey].series.find(s => s.id === seriesId);
             if (!series) return;
             series.rounds = series.rounds.filter(r => r.round !== roundNum);
@@ -834,7 +834,7 @@
         }
 
         function delMisc(subKey, miscId) {
-            if (!confirm('정말 삭제하시겠습니까?')) return;
+            if (!confirm('삭제하시겠습니까?')) return;
             
             appData[subKey].misc = appData[subKey].misc.filter(m => m.id !== miscId);
             saveData();
